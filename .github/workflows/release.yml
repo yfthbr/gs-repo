@@ -24,7 +24,7 @@ jobs:
           cd gs
           # Try to get version number from the CSProj file and load it for later steps.
           $out = ([xml](Get-Content './ProjectGagSpeak/ProjectGagSpeak.csproj')).Project.PropertyGroup.Version
-          Write-Output "Parsed version `"$ver`" from ProjectGagSpeak.csproj."
+          Write-Output "Parsed version `"$out`" from ProjectGagSpeak.csproj."
           Write-Output "ver=$out".Trim() | Out-File -FilePath "$env:GITHUB_OUTPUT" -Encoding ascii
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -68,25 +68,14 @@ jobs:
       - name: Create Release
         if: ${{ steps.check_release_needed.outputs.newtag == true }}
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.get_version.outputs.ver }}
-          release_name: ProjectGagSpeak v${{ steps.get_version.outputs.ver }}
-          draft: "false"
-          prerelease: "false"
-      - name: Upload Release Asset
-        if: ${{ steps.check_release_needed.outputs.newtag == true }}
-        id: upload_release_asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ProjectGagSpeak/bin/x64/Release/ProjectGagSpeak/latest.zip
-          asset_name: ProjectGagSpeak_v${{ steps.get_version.outputs.ver }}.zip
-          asset_content_type: application/zip
+          working_directory: gs/ProjectGagSpeak/bin/x64/Release/ProjectGagSpeak
+          files: latest.zip
+          name: ProjectGagSpeak v${{ steps.get_version.outputs.ver }}
       - name: Update repo.json
         if: ${{ steps.check_release_needed.outputs.newtag == true }}
         run: |
@@ -94,7 +83,7 @@ jobs:
           # Get and update the current repo.json
           $ver = '${{ steps.get_version.outputs.ver }}'
           $path = './projectgagspeak.json'
-          $downloadUri = '${{ steps.upload_release_asset.outputs.browser_download_url }}'
+          $downloadUri = '${{ fromJSON(steps.create_release.outputs.assets)[0].browser_download_url }}'
           $json = Get-Content -Raw $path | ConvertFrom-Json
           $json[0].AssemblyVersion = $ver
           $json[0].DownloadLinkInstall = $downloadUri
