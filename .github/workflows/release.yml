@@ -31,7 +31,9 @@ jobs:
         with:
           dotnet-version: "10.x.x"
       - name: Restore Dependencies
-        run: dotnet restore
+        run: |
+          cd gs
+          dotnet restore
       - name: Fetch Dalamud
         run: |
           cd gs
